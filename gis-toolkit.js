@@ -49,7 +49,6 @@ function dmsToDD(d, m, s) {
   const sign = d < 0 ? -1 : 1;
   return sign * (Math.abs(d) + m/60 + s/3600);
 }
-// Parses a line into {lat, lon, utm:{zone,hemisphere,easting,northing}}
 function parseCoordLine(rawLine) {
   const parts = rawLine.trim().split(/[\s,]+/).filter(Boolean);
   if (parts.length === 0) throw new Error('Empty line');
@@ -196,8 +195,6 @@ function getExportFeatures() {
   });
 }
 
-// Shows the file content in a copyable box — guaranteed to work
-// regardless of download/popup restrictions on the host platform.
 function showDownloadFallback(filename, content) {
   const preview = document.getElementById('exportPreview');
   preview.innerHTML =
@@ -232,8 +229,6 @@ function downloadFile(filename, content, mime) {
 
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 
-  // Always show the copyable fallback too, so the user has a working
-  // option even if the forced download above didn't actually save anything.
   showDownloadFallback(filename, content);
 }
 
