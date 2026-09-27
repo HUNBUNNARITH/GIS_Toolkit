@@ -183,26 +183,11 @@ document.getElementById('lengthBtn').addEventListener('click', () => {
 });
 
 // ================= Tab 3: Export =================
-function getExportFeatures() {
-  const lines = document.getElementById('exportInput').value.split('\n').map(l => l.trim()).filter(Boolean);
-  return lines.map((line, i) => {
-    let name = 'Point' + (i+1), coordStr = line;
-    if (line.includes('|')) {
-      const [n, c] = line.split('|');
-      name = n.trim() || name; coordStr = c.trim();
-    }
-    const { lat, lon } = parseCoordLine(coordStr);
-    return { name, lat, lon };
-  });
-}
-
-// Robust download: tries the standard forced-download, and also opens
-// the file in a new tab shortly after as a fallback in case the host
-// platform (iframe/embedded context) silently blocks the direct save.
 function downloadFile(filename, content, mime) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
 
+  // First, try the direct forced download (works on most normal pages)
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
@@ -212,11 +197,28 @@ function downloadFile(filename, content, mime) {
   a.click();
   document.body.removeChild(a);
 
+  // Fallback: open a fresh, unsandboxed tab that triggers the
+  // download itself, preserving the correct filename
   setTimeout(() => {
-    window.open(url, '_blank');
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(
+        '<html><body>' +
+        '<p style="font-family:sans-serif;padding:20px;">' +
+        'Downloading ' + filename + '... if nothing happens, ' +
+        '<a id="dl" href="' + url + '" download="' + filename + '">click here</a>.' +
+        '</p>' +
+        '<script>document.getElementById("dl").click();<\/script>' +
+        '</body></html>'
+      );
+      win.document.close();
+    } else {
+      // Popup blocked entirely — last resort, raw content in this tab
+      window.open(url, '_blank');
+    }
   }, 150);
 
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
 }
 
 document.getElementById('downloadKmlBtn').addEventListener('click', () => {
