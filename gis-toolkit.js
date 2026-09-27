@@ -183,11 +183,44 @@ document.getElementById('lengthBtn').addEventListener('click', () => {
 });
 
 // ================= Tab 3: Export =================
+function getExportFeatures() {
+  const lines = document.getElementById('exportInput').value.split('\n').map(l => l.trim()).filter(Boolean);
+  return lines.map((line, i) => {
+    let name = 'Point' + (i+1), coordStr = line;
+    if (line.includes('|')) {
+      const [n, c] = line.split('|');
+      name = n.trim() || name; coordStr = c.trim();
+    }
+    const { lat, lon } = parseCoordLine(coordStr);
+    return { name, lat, lon };
+  });
+}
+
+// Shows the file content in a copyable box — guaranteed to work
+// regardless of download/popup restrictions on the host platform.
+function showDownloadFallback(filename, content) {
+  const preview = document.getElementById('exportPreview');
+  preview.innerHTML =
+    '<div class="status info">Direct download may be blocked on this platform. ' +
+    'Copy the content below and save it as <strong>' + filename + '</strong>.</div>' +
+    '<textarea id="fallbackContent" readonly style="min-height:160px; margin-top:8px;"></textarea>' +
+    '<div class="btn-row"><button id="fallbackCopyBtn">Copy to Clipboard</button></div>';
+
+  document.getElementById('fallbackContent').value = content;
+
+  document.getElementById('fallbackCopyBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(content).then(() => {
+      const btn = document.getElementById('fallbackCopyBtn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy to Clipboard'; }, 1500);
+    });
+  });
+}
+
 function downloadFile(filename, content, mime) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
 
-  // First, try the direct forced download (works on most normal pages)
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
@@ -197,28 +230,11 @@ function downloadFile(filename, content, mime) {
   a.click();
   document.body.removeChild(a);
 
-  // Fallback: open a fresh, unsandboxed tab that triggers the
-  // download itself, preserving the correct filename
-  setTimeout(() => {
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write(
-        '<html><body>' +
-        '<p style="font-family:sans-serif;padding:20px;">' +
-        'Downloading ' + filename + '... if nothing happens, ' +
-        '<a id="dl" href="' + url + '" download="' + filename + '">click here</a>.' +
-        '</p>' +
-        '<script>document.getElementById("dl").click();<\/script>' +
-        '</body></html>'
-      );
-      win.document.close();
-    } else {
-      // Popup blocked entirely — last resort, raw content in this tab
-      window.open(url, '_blank');
-    }
-  }, 150);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 
-  setTimeout(() => URL.revokeObjectURL(url), 15000);
+  // Always show the copyable fallback too, so the user has a working
+  // option even if the forced download above didn't actually save anything.
+  showDownloadFallback(filename, content);
 }
 
 document.getElementById('downloadKmlBtn').addEventListener('click', () => {
@@ -228,7 +244,6 @@ document.getElementById('downloadKmlBtn').addEventListener('click', () => {
     const placemarks = feats.map(f => `<Placemark><name>${f.name.replace(/[<&>]/g,'')}</name><Point><coordinates>${f.lon},${f.lat},0</coordinates></Point></Placemark>`).join('\n');
     const kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Exported Points</name>\n${placemarks}\n</Document></kml>`;
     downloadFile('points.kml', kml, 'application/vnd.google-earth.kml+xml');
-    document.getElementById('exportPreview').innerHTML = feats.map(f => row(f.name, f.lat.toFixed(5)+', '+f.lon.toFixed(5))).join('');
   } catch (e) { errEl.textContent = e.message; errEl.className = 'status warn'; errEl.style.display='block'; }
 });
 document.getElementById('downloadGeoJsonBtn').addEventListener('click', () => {
@@ -240,7 +255,6 @@ document.getElementById('downloadGeoJsonBtn').addEventListener('click', () => {
       features: feats.map(f => ({ type: 'Feature', properties: { name: f.name }, geometry: { type: 'Point', coordinates: [f.lon, f.lat] } }))
     };
     downloadFile('points.geojson', JSON.stringify(geojson, null, 2), 'application/geo+json');
-    document.getElementById('exportPreview').innerHTML = feats.map(f => row(f.name, f.lat.toFixed(5)+', '+f.lon.toFixed(5))).join('');
   } catch (e) { errEl.textContent = e.message; errEl.className = 'status warn'; errEl.style.display='block'; }
 });
 
