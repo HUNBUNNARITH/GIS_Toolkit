@@ -70,7 +70,6 @@
     <button class="tab-btn active" data-tab="coord">Coordinates</button>
     <button class="tab-btn" data-tab="area">Area &amp; Length</button>
     <button class="tab-btn" data-tab="export">Export KML/GeoJSON</button>
-    <button class="tab-btn" data-tab="gsd">GSD Calculator</button>
     <button class="tab-btn" data-tab="units">Unit Converter</button>
   </div>
 
@@ -158,24 +157,7 @@ Well 1 | 48N 583960 1483960
     </div>
   </div>
 
-  <!-- TAB 4: GSD CALCULATOR -->
-  <div class="tab-content" id="tab-gsd">
-    <div class="card">
-      <h2>Ground Sample Distance (Drone/Satellite)</h2>
-      <p class="desc">Plan image resolution for a given flight altitude and camera setup.</p>
-      <label>Flight altitude above ground (m)</label><input id="g_alt" type="number" placeholder="120">
-      <label>Sensor width (mm)</label><input id="g_sw" type="number" placeholder="13.2">
-      <label>Sensor height (mm) — optional</label><input id="g_sh" type="number" placeholder="8.8">
-      <label>Focal length (mm)</label><input id="g_fl" type="number" placeholder="8.8">
-      <label>Image width (pixels)</label><input id="g_iw" type="number" placeholder="5472">
-      <label>Image height (pixels) — optional</label><input id="g_ih" type="number" placeholder="3648">
-      <div class="btn-row"><button id="g_calcBtn">Calculate</button></div>
-      <div id="gsdResult"></div>
-      <div class="hint">GSD (cm/pixel) = (Altitude × Sensor width) / (Focal length × Image width) × 100. Same formula applies to height for footprint area.</div>
-    </div>
-  </div>
-
-  <!-- TAB 5: UNIT CONVERTER -->
+  <!-- TAB 4: UNIT CONVERTER -->
   <div class="tab-content" id="tab-units">
     <div class="card">
       <h2>Area Unit Converter</h2>
@@ -423,29 +405,7 @@ document.getElementById('downloadGeoJsonBtn').addEventListener('click', () => {
   } catch (e) { errEl.textContent = e.message; errEl.className = 'status warn'; errEl.style.display='block'; }
 });
 
-// ================= Tab 4: GSD =================
-document.getElementById('g_calcBtn').addEventListener('click', () => {
-  const alt = parseFloat(document.getElementById('g_alt').value);
-  const sw = parseFloat(document.getElementById('g_sw').value);
-  const sh = parseFloat(document.getElementById('g_sh').value);
-  const fl = parseFloat(document.getElementById('g_fl').value);
-  const iw = parseFloat(document.getElementById('g_iw').value);
-  const ih = parseFloat(document.getElementById('g_ih').value);
-  const box = document.getElementById('gsdResult');
-  if (isNaN(alt) || isNaN(sw) || isNaN(fl) || isNaN(iw)) { box.innerHTML = '<div class="status warn">Enter altitude, sensor width, focal length and image width.</div>'; return; }
-  const gsdW = (alt * sw * 100) / (fl * iw); // cm/pixel
-  const footprintW = (gsdW/100) * iw; // meters
-  let rows = row('GSD (width basis)', gsdW.toFixed(2)+' cm/px') + row('Footprint width', footprintW.toFixed(1)+' m');
-  if (!isNaN(sh) && !isNaN(ih)) {
-    const gsdH = (alt * sh * 100) / (fl * ih);
-    const footprintH = (gsdH/100) * ih;
-    const areaHa = (footprintW * footprintH) / 10000;
-    rows += row('GSD (height basis)', gsdH.toFixed(2)+' cm/px') + row('Footprint height', footprintH.toFixed(1)+' m') + row('Footprint area', areaHa.toFixed(3)+' ha');
-  }
-  box.innerHTML = rows;
-});
-
-// ================= Tab 5: Unit converter =================
+// ================= Tab 4: Unit converter =================
 const AREA_TO_SQM = { sqm: 1, ha: 10000, sqkm: 1000000, acre: 4046.8564224, rai: 1600 };
 document.getElementById('u_convertBtn').addEventListener('click', () => {
   const val = parseFloat(document.getElementById('u_value').value);
